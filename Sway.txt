@@ -1,0 +1,63 @@
+Data Analyst SQL Challenge
+
+
+1. SELECT COUNT (u_id) FROM users;		#gives the total number of users from the user table
+
+2. SELECT COUNT (transfer_id) FROM transfers 	#gives total number of sent tranfers made in CFA
+   WHERE send_amount_currency = 'CFA';
+
+3. SELECT COUNT (u_id) FROM transfers 
+   WHERE send_amount_currency = 'CFA';		#returns transfer made by different users in CFA
+
+4. SELECT COUNT (*) atx_id, DATE_PART('MONTH', when_created) 	#gives total number of agent transactions in each month and sorts out months in 2018 recorded in the database and creates a column for it.
+   months_in_year_2018 FROM agent_transactions		
+   WHERE when_created BETWEEN '2018-01-01'AND '2018-12-31'	#gives the range of days transactions were made in the months of 2018 since the number of years for database is not known.
+   GROUP BY 2							#groups all agent transactions in the same month
+   ORDER BY 2 ASC;						#orders the months in 2018 in ascending order
+
+5. SELECT SUM (CASE WHEN amount > 0 THEN amount ELSE 0 END) AS withdrawal,	#set condition for withdrawal and deposit
+   SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS deposit,
+   CASE WHEN ((SUM (CASE WHEN amount > 0 THEN amount ELSE 0 END)) >	   #compares the deposit and withdrawal conditions to give the net withdrawers and depositors
+ ((SUM (CASE WHEN amount < 0 THEN amount ELSE 0 END))) * -1)
+   THEN 'net_withdrawer'		
+   ELSE 'net_depositor'
+   END AS agent_status, 		     #a cloumn that shows whether the outcome was net_deposotor or net_withdrawal
+   COUNT (*) FROM agent_transactions
+   WHERE when_created > CURRENT_DATE - INTERVAL '1 WEEK';         #retrieves data from last week to current day
+
+6. CREATE TABLE atx_volume_city_summary AS				    #creates a table
+   SELECT agents.city, COUNT (amount) volume FROM agent_transactions	    #gives table columns: city and volume (volume is the total amount transacted)
+   LEFT OUTER JOIN agents ON agents.agent_id = agent_transactions.agent_id	    #compares and returns all records from agents table and matched 
+   WHERE agents.when_created > CURRENT_DATE - INTERVAL '1 WEEK'	       records from agent transactions table
+   GROUP BY agents.city;
+
+7. CREATE TABLE atx_volume_country_summary AS			  #creates a table
+   SELECT COUNT(agents.country) country, COUNT (agents.city) city, 	 	  #gives table columns: country, city and volume
+   COUNT(agent_transactions.amount) volume FROM agent_transactions
+   INNER JOIN agents ON agents.agent_id = agent_transactions.agent_id	  #compares and returns records that have matching values in the 
+   GROUP BY agents.country;						    agent transaction table and agents table
+
+8.  CREATE TABLE send_volume_country_kind AS
+     SELECT wallets.ledger_location AS country, transfers.kind AS kind, 
+    COUNT (transfers.send_amount_scalar) volume FROM transfers
+    INNER JOIN wallets ON transfers.source_wallet_id = wallets.wallet_id
+    WHERE transfers.when_created > CURRENT_DATE - INTERVAL '7 Days'
+    GROUP BY wallets.ledger_location, transfers.kind;
+
+9. CREATE TABLE send_volume_country_kind_2 AS
+    SELECT wallets.ledger_location AS country, transfers.kind AS kind, 
+    COUNT (transfers.send_amount_scalar) volume,
+    COUNT(transfers.transfer_id) transaction_count, 
+    COUNT (DISTINCT transfers.u_id) number_of_unique_senders
+    FROM transfers
+    INNER JOIN wallets ON transfers.source_wallet_id = wallets.wallet_id
+    WHERE transfers.when_created > CURRENT_DATE - INTERVAL '7 Days'
+   GROUP BY wallets.ledger_location, transfers.kind;
+
+10. SELECT users.u_id, transfers.source_wallet_id, transfers.send_amount_scalar, transfers.when_created
+    FROM transfers
+    FULL OUTER JOIN users
+    ON transfers.source_wallet_id = users.wallet_id			#checks if the source wallet id belongs to a user
+    WHERE send_amount_currency = 'CFA'
+    AND send_amount_scalar > 10000000					#confirms if amount sent is above 10000000
+    AND transfers.when_created > CURRENT_DATE - INTERVAL '1 month';	#gives a month interval from current day to previous days
