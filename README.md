@@ -1,2 +1,2 @@
-# Data-Analyst
+# Databases
 Assignment for Azubi Africa
